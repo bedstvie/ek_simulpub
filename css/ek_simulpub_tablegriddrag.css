@@ -1,0 +1,145 @@
+body.adminimal-theme .tabledrag-processed tr {
+    width: 180px;
+    height: 200px;
+    border: #000 solid 3px;
+    margin: 0 30px 70px;
+    float: left;
+}
+
+body.adminimal-theme .tabledrag-processed tr td.td-title,
+body.adminimal-theme .tabledrag-processed tr td.td-state {
+    display: block;
+    text-align: center;
+    padding: 0 20px;
+}
+
+body.adminimal-theme .tabledrag-processed tr td.td-title {
+    height: 120px;
+    font-size: 20px;
+    line-height: 24px;
+    overflow: hidden;
+}
+
+body.adminimal-theme .tabledrag-processed tr td.td-title a {
+    text-decoration: none;
+    color: #000;
+}
+
+body.adminimal-theme .tabledrag-processed tr td.td-title div {
+    display: table-cell;
+    vertical-align: middle;
+    height: 120px;
+    width: 140px;
+    max-height: 120px;
+    max-width: 140px;
+}
+
+body.adminimal-theme .tabledrag-processed tr td.td-title div a.plus {
+    color: #008000;
+    font-size: 100px;
+    text-decoration: none;
+    top: 35px;
+    position: relative;
+}
+
+body.adminimal-theme .tabledrag-processed tr td.td-state {
+    top: 15px;
+}
+
+body.adminimal-theme .tabledrag-processed tr td.td-state.online {
+    color: #008000;
+}
+
+body.adminimal-theme .tabledrag-processed tr td.td-state.offline {
+    color: #ff0000;
+}
+
+body.adminimal-theme .tabledrag-processed tr td.td-state,
+body.adminimal-theme .tabledrag-processed tr td.td-operation,
+body.adminimal-theme .tabledrag-processed tr td.td-delimeter {
+    position: relative;
+    padding: 0 15px;
+}
+
+body.adminimal-theme .tabledrag-processed tr td.td-delimeter {
+    font-weight: bold;
+    font-size: 24px;
+}
+
+body.adminimal-theme .tabledrag-processed tr td.td-operation,
+body.adminimal-theme .tabledrag-processed tr td.td-delimeter {
+    top: 35px;
+}
+
+.drag-grid {
+    margin-top: 20px;
+    clear: both;
+}
+
+form fieldset {
+    border: 0;
+}
+
+.drag-grid fieldset {
+    border-top: 3px solid #000;
+    margin-right: 74px;
+}
+
+.drag-grid:last-child fieldset {
+    border-bottom: 3px solid #000;
+}
+
+.drag-grid .section-title a {
+    color: #ff0000;
+    font-size: 24px;
+    margin: 10px;
+    text-decoration: none;
+}
+
+.drag-grid .section-action {
+    float: right;
+    border: 3px solid #000000;
+    width: 30px;
+    height: 30px;
+    background: #fff;
+    margin: 20px;
+    position: relative;
+    vertical-align: middle;
+    text-align: center;
+}
+
+.drag-grid .section-action a {
+    text-decoration: none;
+    font-size: 35px;
+    color: #008000;
+}
+
+.drag-grid .section-action.section-remove {
+    top: -35px;
+}
+
+.drag-grid .section-action.section-remove {
+    display: table-cell;
+}
+
+.drag-grid:only-of-type .section-action.section-remove {
+    display: none;
+}
+
+.drag-grid .section-action.section-add {
+    top: -60px;
+    display: none;
+}
+
+.drag-grid:last-of-type .section-action.section-add {
+    display: table-cell;
+}
+
+.drag-grid .section-action.section-add a {
+    position: relative;
+    top: 5px;
+}
+
+.form-section-remove {
+    float: right;
+}

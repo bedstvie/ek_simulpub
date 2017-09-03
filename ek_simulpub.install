@@ -1,0 +1,230 @@
+<?php
+
+/**
+ * @file
+ * Editis Kurokawa simulpub module install.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function ek_simulpub_schema() {
+  $schema = array();
+
+  // The name of the table can be any name we choose. However, namespacing the
+  // table with the module name is best practice.
+  $schema['ek_simulpub_serie'] = array(
+    'description' => 'The base table for our simulpub_serie entity.',
+    'fields' => array(
+      'serie_id' => array(
+        'description' => 'Primary key of the simulpub serie entity.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 'Boolean indicating whether the serie is published (visible to non-administrators).',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+      // If we allow multiple bundles, then the schema must handle that;
+      // We'll put it in the 'bundle_type' field to avoid confusion with the
+      // entity type.
+      'bundle_type' => array(
+        'description' => 'The bundle type',
+        'type' => 'text',
+        'size' => 'medium',
+        'not null' => TRUE,
+      ),
+      // Additional properties are just things that are common to all
+      // entities and don't require field storage.
+      'id_serie_yonix' => array(
+        'description' => 'id serie yonix',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'title' => array(
+        'description' => 'title',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp of the entity creation time.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'changed' => array(
+        'description' => 'The Unix timestamp of the entity change time.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('serie_id'),
+  );
+
+  // The name of the table can be any name we choose. However, namespacing the
+  // table with the module name is best practice.
+  $schema['ek_simulpub_chapitre'] = array(
+    'description' => 'The base table for our simulpab_chapitre entity.',
+    'fields' => array(
+      'chapitre_id' => array(
+        'description' => 'Primary key of the simulpub chapitre entity.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 'Boolean indicating whether the chapitre is published (visible to non-administrators).',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+      // If we allow multiple bundles, then the schema must handle that;
+      // We'll put it in the 'bundle_type' field to avoid confusion with the
+      // entity type.
+      'bundle_type' => array(
+        'description' => 'The bundle type',
+        'type' => 'text',
+        'size' => 'medium',
+        'not null' => TRUE,
+      ),
+      'title' => array(
+        'description' => 'title',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp of the entity creation time.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'section_id' => array(
+        'description' => 'Section id.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'num' => array(
+        'description' => 'Numeric.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('chapitre_id'),
+  );
+
+  // The name of the table can be any name we choose. However, namespacing the
+  // table with the module name is best practice.
+  $schema['ek_simulpub_sections'] = array(
+    'description' => 'The sections for series.',
+    'fields' => array(
+      'section_id' => array(
+        'description' => 'Primary key of the section.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'title' => array(
+        'description' => 'title',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'serie_id' => array(
+        'description' => 'Serie id.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'data' => array(
+        'type' => 'blob',
+        'not null' => FALSE,
+        'size' => 'normal',
+        'serialize' => TRUE,
+        'description' => 'A serialized array.',
+      ),
+    ),
+    'primary key' => array('section_id'),
+  );
+
+  return $schema;
+}
+
+
+/**
+ * Implements hook_uninstall().
+ *
+ * At uninstall time we'll notify field.module that the entity was deleted
+ * so that attached fields can be cleaned up.
+ *
+ * @ingroup entity_example
+ */
+function ek_simulpub_uninstall() {
+  field_attach_delete_bundle('simulpub_serie', 'ek_simulpub_serie_bundle');
+}
+
+/**
+ * Implements hook_update_N().
+ */
+function ek_simulpub_update_7001() {
+  $table_name = 'ek_simulpub_sections';
+  $field_name = 'title';
+  $table = drupal_get_schema_unprocessed('ek_simulpub', $table_name);
+  return db_add_field($table_name, $field_name, $table['fields'][$field_name]);
+}
+
+/**
+ * Implements hook_update_N().
+ */
+function ek_simulpub_update_7002() {
+  return db_update('ek_simulpub_sections')
+    ->fields(array('title' => 'Tome'))
+    ->execute();
+}
+
+/**
+ * Implements hook_update_N().
+ */
+function ek_simulpub_update_7003() {
+  if (module_exists('photoswipe')) {
+    $a = photoswipe_get_default_settings();
+    $a['shareEl'] = FALSE;
+    variable_set('photoswipe_settings', $a);
+  }
+}
+
+/**
+ * Add newcol field to ek_simulpub_serie table = changed.
+ */
+function ek_simulpub_update_7004() {
+  $spec = array(
+    'description' => 'The Unix timestamp of the entity change time.',
+    'type' => 'int',
+    'not null' => TRUE,
+    'default' => 0,
+  ); 
+  db_add_field('ek_simulpub_serie', 'changed', $spec);
+}
+
+/**
+ * Add newcol field to ek_simulpub_chapitre table = numeric.
+ */
+function ek_simulpub_update_7005() {
+  $spec = array(
+    'description' => 'Weight chapter in serie.',
+    'type' => 'int',
+    'not null' => TRUE,
+    'default' => 0,
+  ); 
+  db_add_field('ek_simulpub_chapitre', 'num', $spec);
+}

@@ -1,0 +1,872 @@
+<?php
+
+/**
+ * @file
+ * Editis Kurokawa simulpub module.
+ */
+
+define ("SIMULPUB_MANAGE", "admin/structure/simulpub");
+define ("SIMULPUB_MANAGE_SERIE", "admin/structure/simulpub/simulpub_serie");
+define ("SIMULPUB_MANAGE_CHAPITRE", "admin/structure/simulpub/simulpub_chapitre");
+
+module_load_include('inc', 'ek_simulpub', 'includes/ek_simulpub');
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ */
+function ek_simulpub_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'panels' && !empty($plugin)) {
+    return 'plugins/' . $plugin;
+  }
+  if ($module == 'ctools' && !empty($plugin)) {
+    return 'plugins/' . $plugin;
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function ek_simulpub_theme() {
+  return array(
+    'ek_simulpub_serie' => array(
+      'variables' => array(
+        'serie' => NULL,
+      ),
+      'template'  => 'theme/ek_simulpub_serie',
+    ),
+
+    'ek_simulpub_mailchimp_subscribe_form' => array(
+      'variables' => array(),
+      'template'  => 'theme/ek_simulpub_mailchimp_subscribe_form',
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function ek_simulpub_menu() {
+  $admin_file = 'includes/ek_simulpub.admin.inc';
+
+  $items[SIMULPUB_MANAGE] = array(
+    'title'            => 'Simulpub',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('ek_simulpub_serie_list_entities'),
+    'access arguments' => array('administer simulpub entities'),
+    'file'             => $admin_file,
+  );
+
+  // List of all entity_example_basic entities.
+  $items[SIMULPUB_MANAGE . '/manage'] = array(
+    'title'            => 'List',
+    'type'             => MENU_DEFAULT_LOCAL_TASK,
+  );
+
+  // This provides a place for Field API to hang its own
+  // interface and has to be the same as what was defined
+  $items[SIMULPUB_MANAGE_SERIE] = array(
+    'title'            => 'Series',
+    'page callback'    => 'ek_simulpub_list_entities',
+    'page arguments'   => array(3),
+    'access arguments' => array('administer simulpub entities'),
+    'file'             => $admin_file,
+  );
+
+  // List of all entity_example_basic entities.
+  $items[SIMULPUB_MANAGE_SERIE . '/manage'] = array(
+    'title'            => 'List',
+    'type'             => MENU_DEFAULT_LOCAL_TASK,
+  );
+
+  // Add example entities.
+  $items[SIMULPUB_MANAGE_SERIE . '/manage/add'] = array(
+    'title'            => 'Add a Simulpub Serie',
+    'page callback'    => 'ek_simulpub_serie_add',
+    'access arguments' => array('create simulpub_serie entities'),
+    'type'             => MENU_CALLBACK,
+    'file'             => $admin_file,
+  );
+
+  // The page to view our entities - needs to follow what
+  // is defined in basic_uri and will use load_basic to retrieve
+  // the necessary entity info.
+  $items['admin/structure/simulpub/simulpub_serie/%simulpub_serie'] = array(
+    'title'            => 'Edit Chapitre for serie',
+    'page callback'    => 'ek_simulpub_serie_chapitres_form',
+    'page arguments'   => array(4),
+    'access arguments' => array('edit any simulpub_serie entity'),
+    'file'             => $admin_file,
+  );
+
+  // 'View' tab for an individual entity page.
+  $items['admin/structure/simulpub/simulpub_serie/%simulpub_serie/chapitres'] = array(
+    'title'            => 'Edit Chapitre for serie',
+    'type'             => MENU_DEFAULT_LOCAL_TASK,
+    'weight'           => -10,
+  );
+
+  // 'Edit' tab for an individual entity page.
+  $items['admin/structure/simulpub/simulpub_serie/%simulpub_serie/edit'] = array(
+    'title'            => 'Edit',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('ek_simulpub_serie_form', 4),
+    'access arguments' => array('edit any simulpub_serie entity'),
+    'type'             => MENU_LOCAL_TASK,
+    'file'             => $admin_file,
+  );
+
+  $items['admin/structure/simulpub/simulpub_serie/%simulpub_serie/delete'] = array(
+    'title'            => 'Delete',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('ek_simulpub_serie_delete_form', 4),
+    'access arguments' => array('delete any simulpub_serie entity'),
+    'type'             => MENU_CALLBACK,
+    'file'             => $admin_file,
+  );
+
+  // This provides a place for Field API to hang its own
+  // interface and has to be the same as what was defined
+  $items[SIMULPUB_MANAGE_CHAPITRE] = array(
+    'title'            => 'Chapitres',
+    'page callback'    => 'ek_simulpub_list_entities',
+    'page arguments'   => array(3),
+    'access arguments' => array('administer simulpub entities'),
+    'file'             => $admin_file,
+  );
+
+  // List of all entity_example_basic entities.
+  $items[SIMULPUB_MANAGE_CHAPITRE . '/manage'] = array(
+    'title'            => 'List',
+    'type'             => MENU_DEFAULT_LOCAL_TASK,
+  );
+
+  // Add example entities.
+  $items[SIMULPUB_MANAGE_CHAPITRE . '/manage/add/%simulpub_serie'] = array(
+    'title'            => 'Add a Simulpub Chapitre',
+    'page callback'    => 'ek_simulpub_chapitre_add',
+    'page arguments'   => array(6),
+    'access arguments' => array('create simulpub_chapitre entities'),
+    'type'             => MENU_CALLBACK,
+    'file'             => $admin_file,
+  );
+
+  // 'Edit' tab for an individual entity page.
+  $items['admin/structure/simulpub/simulpub_chapitre/%simulpub_chapitre/edit'] = array(
+    'title' => 'Edit',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('ek_simulpub_chapitre_form', 4),
+    'access arguments' => array('edit any simulpub_chapitre entity'),
+    'file'             => $admin_file,
+  );
+
+  $items['admin/structure/simulpub/simulpub_chapitre/%simulpub_chapitre/delete'] = array(
+    'title'            => 'Delete',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('ek_simulpub_chapitre_delete_form', 4),
+    'access arguments' => array('delete any simulpub_chapitre entity'),
+    'type'             => MENU_CALLBACK,
+    'file'             => $admin_file,
+  );
+
+  $ajax_file = 'includes/ek_simulpub.ajax.inc';
+
+  $items['js/simulpub_serie_section/%simulpub_serie/add/%'] = array(
+    'page callback'     => 'ek_simulpub_serie_section',
+    'page arguments'    => array(2, 3, 4),
+    'theme callback'    => 'ek_simulpub_theme_callback',
+    'delivery callback' => 'ajax_deliver',
+    'access arguments'  => array('edit any simulpub_serie entity'),
+    'file'              => $ajax_file,
+    'type'              => MENU_CALLBACK,
+  );
+
+  $items['js/simulpub_serie_section/%simulpub_serie/%/%/%'] = array(
+    'page callback'     => 'ek_simulpub_serie_section',
+    'page arguments'    => array(2, 3, 4, 5),
+    'theme callback'    => 'ek_simulpub_theme_callback',
+    'delivery callback' => 'ajax_deliver',
+    'access arguments'  => array('edit any simulpub_serie entity'),
+    'file'              => $ajax_file,
+    'type'              => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implement callback().
+ */
+function ek_simulpub_theme_callback() {
+  return 'adminimal';
+}
+
+/**
+ * Implements hook_permission().
+ */
+function ek_simulpub_permission() {
+  $permissions = array(
+    'administer simulpub entities' => array(
+      'title' => t('Administer simulpub entities'),
+    ),
+    'view any simulpub_serie entity' => array(
+      'title' => t('View any simulpub_serie entity'),
+    ),
+    'edit any simulpub_serie entity' => array(
+      'title' => t('Edit any simulpub_serie entity'),
+    ),
+    'create simulpub_serie entities' => array(
+      'title' => t('Create simulpub_serie Entities'),
+    ),
+    'delete any simulpub_serie entity' => array(
+      'title' => t('Delete any simulpub_serie entity'),
+    ),
+    'view any simulpub_chapitre entity' => array(
+      'title' => t('View any simulpub_chapitre entity'),
+    ),
+    'edit any simulpub_chapitre entity' => array(
+      'title' => t('Edit any simulpub_chapitre entity'),
+    ),
+    'create simulpub_chapitre entities' => array(
+      'title' => t('Create simulpub_chapitre Entities'),
+    ),
+    'delete any simulpub_chapitre entity' => array(
+      'title' => t('Delete any simulpub_chapitre entity'),
+    ),
+  );
+  return $permissions;
+}
+
+/**
+ * Implements hook_entity_info().
+ *
+ * This is the fundamental description of the entity.
+ *
+ * It provides a single entity with a single bundle and without revision
+ * support.
+ */
+function ek_simulpub_entity_info() {
+  $info['simulpub_serie'] = array(
+    // A human readable label to identify our entity.
+    'label' => t('Simulpub serie'),
+
+    // The controller for our Entity, extending the Drupal core controller.
+    'controller class' => 'EntitySimulpubSerieController',
+
+    // The table for this entity defined in hook_schema()
+    'base table'      => 'ek_simulpub_serie',
+    'label callback'  => 'ek_simulpub_serie_title',
+    'access callback' => 'ek_simulpub_access_callback',
+
+    // IF fieldable == FALSE, we can't attach fields.
+    'fieldable'       => TRUE,
+
+    // entity_keys tells the controller what database fields are used for key
+    // functions. It is not required if we don't have bundles or revisions.
+    // Here we do not support a revision, so that entity key is omitted.
+    'entity keys' => array(
+      // The 'id'.
+      'id' => 'serie_id' ,
+      // Bundle will be determined by the 'bundle_type' field.
+      'bundle' => 'bundle_type',
+    ),
+    'bundle keys' => array(
+      'bundle' => 'bundle_type',
+    ),
+
+    // FALSE disables caching. Caching functionality is handled by Drupal core.
+    'static cache' => TRUE,
+
+    // Bundles are alternative groups of fields or configuration
+    // associated with a base entity type.
+    'bundles' => array(
+      'ek_simulpub_serie' => array(
+        'label' => t('Simulpub serie'),
+        // 'admin' key is used by the Field UI to provide field and
+        // display UI pages.
+        'admin' => array(
+          'path'             => SIMULPUB_MANAGE_SERIE,
+          'access arguments' => array('administer simulpub entities'),
+        ),
+      ),
+    ),
+    // View modes allow entities to be displayed differently based on context.
+    // As a demonstration we'll support "Tweaky", but we could have and support
+    // multiple display modes.
+    'view modes' => array(
+      'full' => array(
+        'label'           => t('Full'),
+        'custom settings' => FALSE,
+      ),
+    ),
+  );
+
+  $info['simulpub_chapitre'] = array(
+    // A human readable label to identify our entity.
+    'label' => t('Simulpub chapitre'),
+
+    // The controller for our Entity, extending the Drupal core controller.
+    'controller class' => 'EntitySimulpubChapitreController',
+
+    // The table for this entity defined in hook_schema()
+    'base table'      => 'ek_simulpub_chapitre',
+    'label callback'  => 'ek_simulpub_chapitre_title',
+    'access callback' => 'ek_simulpub_access_callback',
+
+    // IF fieldable == FALSE, we can't attach fields.
+    'fieldable' => TRUE,
+
+    // entity_keys tells the controller what database fields are used for key
+    // functions. It is not required if we don't have bundles or revisions.
+    // Here we do not support a revision, so that entity key is omitted.
+    'entity keys' => array(
+      // The 'id'.
+      'id'     => 'chapitre_id' ,
+      // Bundle will be determined by the 'bundle_type' field.
+      'bundle' => 'bundle_type',
+    ),
+    'bundle keys' => array(
+      'bundle' => 'bundle_type',
+    ),
+
+    // FALSE disables caching. Caching functionality is handled by Drupal core.
+    'static cache' => TRUE,
+
+    // Bundles are alternative groups of fields or configuration
+    // associated with a base entity type.
+    'bundles' => array(
+      'ek_simulpub_chapitre' => array(
+        'label' => t('Simulpub chapitre'),
+        // 'admin' key is used by the Field UI to provide field and
+        // display UI pages.
+        'admin' => array(
+          'path' => SIMULPUB_MANAGE_CHAPITRE,
+          'access arguments' => array('administer simulpub entities'),
+        ),
+      ),
+    ),
+    // View modes allow entities to be displayed differently based on context.
+    // As a demonstration we'll support "Tweaky", but we could have and support
+    // multiple display modes.
+    'view modes' => array(
+      'full' => array(
+        'label' => t('Full'),
+        'custom settings' => FALSE,
+      ),
+    ),
+  );
+
+  return $info;
+}
+
+/**
+ * Implements hook_entity_insert().
+ */
+function ek_simulpub_entity_insert($entity, $type) {
+  if ($type == 'simulpub_serie') {
+    $object = new stdClass();
+    $object->serie_id = $entity->serie_id;
+    $count = db_select('ek_simulpub_sections', 'ess')
+      ->fields('ess', array('section_id'))
+      ->condition('serie_id', $entity->serie_id)
+      ->execute()
+      ->rowCount();
+    $object->title = 'Tome ' . ($count + 1);
+    drupal_write_record('ek_simulpub_sections', $object);
+  }
+}
+
+function ek_simulpub_access_callback($entity) {
+  return TRUE;
+}
+
+/**
+ * Implements hook_field_extra_fields().
+ *
+ * This exposes the "extra fields" (usually properties that can be configured
+ * as if they were fields) of the entity as pseudo-fields
+ * so that they get handled by the Entity and Field core functionality.
+ * Node titles get treated in a similar manner.
+ */
+function ek_simulpub_field_extra_fields() {
+  $form_elements['title'] = array(
+    'label'       => t('Title of the serie'),
+    'description' => t('Title of the serie (an extra form field)'),
+    'weight'      => -4,
+  );
+  $form_elements['status'] = array(
+    'label'       => t('Status'),
+    'description' => t('Status'),
+    'weight'      => -4,
+  );
+
+  $display_elements['created'] = array(
+    'label'       => t('Creation date'),
+    'description' => t('Creation date (an extra display field)'),
+    'weight'      => 0,
+  );
+  $display_elements['changed'] = array(
+    'label'       => t('Changed date'),
+    'description' => t('Changed date (an extra display field)'),
+    'weight'      => 0,
+  );
+  $display_elements['title'] = array(
+    'label'       => t('Title'),
+    'description' => t('Title'),
+    'weight'      => -4,
+  );
+  $form_elements['status'] = array(
+    'label'       => t('Status'),
+    'description' => t('Status'),
+    'weight'      => -4,
+  );
+
+  // Since we have only one bundle type, we'll just provide the extra_fields
+  // for it here.
+  $extra_fields['simulpub_serie']['ek_simulpub_chapitre']['form'] = $form_elements;
+  $extra_fields['simulpub_serie']['ek_simulpub_chapitre']['display'] = $display_elements;
+
+  $form_elements['id_serie_yonix'] = array(
+    'label'       => t('Id Serie Yonix'),
+    'description' => t('Id Serie Yonix'),
+    'weight'      => -5,
+  );
+
+  $display_elements['id_serie_yonix'] = array(
+    'label' => t('Id Serie Yonix'),
+    'description' => t('Id Serie Yonix'),
+    'weight' => -5,
+  );
+
+  // Since we have only one bundle type, we'll just provide the extra_fields
+  // for it here.
+  $extra_fields['simulpub_serie']['ek_simulpub_serie']['form'] = $form_elements;
+  $extra_fields['simulpub_serie']['ek_simulpub_serie']['display'] = $display_elements;
+
+  return $extra_fields;
+}
+
+/**
+ * Implements hook_element_info_alter().
+ */
+function ek_simulpub_element_info_alter(&$type) {
+  // Decrease the default size of textfields.
+  if (isset($type['media'])) {
+    array_unshift($type['media']['#process'], 'ek_simulpub_media_element_process');
+  }
+}
+
+/**
+ * Process callback for the media form element.
+ */
+function ek_simulpub_media_element_process($element, &$form_state, $form) {
+  if ($element['#field_name'] == 'field_simulpub_serie_visual_left'
+  && isset($form_state['simulpub']['field_simulpub_serie_visual_left'])) {
+
+    $element['#value']['fid']   = $form_state['simulpub']['field_simulpub_serie_visual_left']->fid;
+    $element['#value']['#file'] = $form_state['simulpub']['field_simulpub_serie_visual_left'];
+    unset($form_state['simulpub']['field_simulpub_serie_visual_left']);
+  }
+  return $element;
+}
+
+/**
+ * Fetch a basic object.
+ *
+ * This function ends up being a shim between the menu system and
+ * entity_example_basic_load_multiple().
+ *
+ * This function gets its name from the menu system's wildcard
+ * naming conventions. For example, /path/%wildcard would end
+ * up calling wildcard_load(%wildcard value). In our case defining
+ * the path: examples/entity_example/basic/%entity_example_basic in
+ * hook_menu() tells Drupal to call entity_example_basic_load().
+ *
+ * @param int $serie_id
+ *   Integer specifying the basic entity id.
+ * @param bool $reset
+ *   A boolean indicating that the internal cache should be reset.
+ *
+ * @return object
+ *   A fully-loaded $basic object or FALSE if it cannot be loaded.
+ *
+ * @see entity_example_basic_load_multiple()
+ * @see entity_example_menu()
+ */
+function simulpub_serie_load($serie_id = NULL, $reset = FALSE) {
+  $serie_ids = (isset($serie_id) ? array($serie_id) : array());
+  $basic     = simulpub_serie_load_multiple($serie_ids, array(), $reset);
+  return $basic ? reset($basic) : FALSE;
+}
+
+/**
+ * Loads multiple basic entities.
+ *
+ * We only need to pass this request along to entity_load(), which
+ * will in turn call the load() method of our entity controller class.
+ */
+function simulpub_serie_load_multiple($serie_ids = FALSE, $conditions = array(), $reset = FALSE) {
+  return entity_load('simulpub_serie', $serie_ids, $conditions, $reset);
+}
+
+/**
+ * Callback for a page title when this entity is displayed.
+ */
+function ek_simulpub_serie_title($entity) {
+  return t('Simulpub serie @title (@id_serie_yonix)', array('@title' => $entity->title, '@id_serie_yonix' => $entity->id_serie_yonix));
+}
+
+/**
+ * We save the entity by calling the controller.
+ */
+function simulpub_serie_save(&$entity) {
+  return entity_get_controller('simulpub_serie')->save($entity);
+}
+
+/**
+ * Use the controller to delete the entity.
+ */
+function simulpub_serie_delete($entity) {
+  entity_get_controller('simulpub_serie')->delete($entity);
+}
+
+/**
+ * Fetch a basic object.
+ *
+ * This function ends up being a shim between the menu system and
+ * entity_example_basic_load_multiple().
+ *
+ * This function gets its name from the menu system's wildcard
+ * naming conventions. For example, /path/%wildcard would end
+ * up calling wildcard_load(%wildcard value). In our case defining
+ * the path: examples/entity_example/basic/%entity_example_basic in
+ * hook_menu() tells Drupal to call entity_example_basic_load().
+ *
+ * @param int $chapitre_id
+ *   Integer specifying the basic entity id.
+ * @param bool $reset
+ *   A boolean indicating that the internal cache should be reset.
+ *
+ * @return object
+ *   A fully-loaded $basic object or FALSE if it cannot be loaded.
+ *
+ * @see entity_example_basic_load_multiple()
+ * @see entity_example_menu()
+ */
+function simulpub_chapitre_load($chapitre_id = NULL, $reset = FALSE) {
+  $chapitre_ids = (isset($chapitre_id) ? array($chapitre_id) : array());
+  $basic        = simulpub_chapitre_load_multiple($chapitre_ids, array(), $reset);
+  return $basic ? reset($basic) : FALSE;
+}
+
+/**
+ * Loads multiple basic entities.
+ *
+ * We only need to pass this request along to entity_load(), which
+ * will in turn call the load() method of our entity controller class.
+ */
+function simulpub_chapitre_load_multiple($chapitre_ids = FALSE, $conditions = array(), $reset = FALSE) {
+  return entity_load('simulpub_chapitre', $chapitre_ids, $conditions, $reset);
+}
+
+/**
+ * Callback for a page title when this entity is displayed.
+ */
+function ek_simulpub_chapitre_title($entity) {
+  return t('Simulpub chapitre @title', array('@title' => $entity->title));
+}
+
+/**
+ * We save the entity by calling the controller.
+ */
+function simulpub_chapitre_save(&$entity) {
+  return entity_get_controller('simulpub_chapitre')->save($entity);
+}
+
+/**
+ * Use the controller to delete the entity.
+ */
+function simulpub_chapitre_delete($entity) {
+  entity_get_controller('simulpub_chapitre')->delete($entity);
+}
+
+/**
+ * Include preprocess files.
+ */
+function ek_simulpub_preprocess_ek_simulpub_serie(&$vars) {
+  $serie = $vars['serie'];
+
+  $vars['serie_title'] = $serie->title;
+
+  if (!empty($serie->field_simulpub_serie_visual_left['und'][0])) {
+    $vars['left_image'] = field_view_field('simulpub_serie', $serie, 'field_simulpub_serie_visual_left', 'full');
+  }
+  else {
+    $field = field_info_field('field_simulpub_serie_visual_left');
+    if (isset($field['settings']['default_image'])) {
+      $def_fid = $field['settings']['default_image'];
+      $uri = file_load($def_fid);
+      $img_path = $uri->uri;
+      $image_s = array(
+        'style_name' => 'simulpub_279_267',
+        'path' => $img_path,
+      );
+      $vars['left_image'] = theme('image_style', $image_s);
+    }
+  }
+
+  $sections = ek_simulpub_get_sections($serie->serie_id, TRUE);
+
+  $section_titles = array();
+  $s_c = array();
+  foreach ($sections as $section) {
+    $chapitres = db_select('ek_simulpub_chapitre', 'esc')
+      ->fields('esc', array('chapitre_id'))
+      ->condition('section_id', $section->section_id)
+      ->condition('status', 0, '<>')
+      ->execute()
+      ->fetchCol();
+
+    if ($chapitres) {
+      if ($data = simulpub_chapitre_load_multiple($chapitres)) {
+        if ($section->data) {
+          $section_options = unserialize($section->data);
+        }
+        $order = isset($section_options['order']) ? $section_options['order'] : array();
+        $s_c[$section->section_id] = ek_simulpub_data_order($data, $order);
+      }
+    }
+    $section_titles[$section->section_id] = $section->title;
+
+    if (isset($_SESSION['entity_simulpub_preview'])) {
+      $new_chapitre = $_SESSION['entity_simulpub_preview'];
+      $s_c[$new_chapitre->section_id][$new_chapitre->chapitre_id] = $new_chapitre;
+      unset($_SESSION['entity_simulpub_preview']);
+    }
+
+  }
+
+  $vars['section_titles'] = $section_titles;
+
+  $serie_node = ek_simulpub_get_serie_by_yonix_id($serie->id_serie_yonix);
+
+  $vars['right_image'] = FALSE;
+  if ($serie_node) {
+    $serie_node_wrapper = entity_metadata_wrapper('node', $serie_node);
+    $books = $serie_node_wrapper->field_book_reference->value();
+    if ($books) {
+      $first_book = array_shift($books);
+      $min_tom = empty($first_book->field_tome[LANGUAGE_NONE][0]['value']) ? 0 : $first_book->field_tome[LANGUAGE_NONE][0]['value'];
+      foreach ($books as $book) {
+        if ($min_tom == 1) {
+          break;
+        }
+        $current_tom = empty($book->field_tome[LANGUAGE_NONE][0]['value']) ? 0 : $book->field_tome[LANGUAGE_NONE][0]['value'];
+        if ($current_tom < $min_tom || $current_tom == 1) {
+          $first_book = $book;
+          $min_tom = $current_tom;
+        }
+      }
+
+      $image_field_raw = field_get_items('node', $first_book, 'field_image');
+
+      if (!empty($image_field_raw[0])) {
+        $vars['right_image'] = field_view_value('node', $first_book, 'field_image', $image_field_raw[0],
+          array(
+            'type' => 'image',
+            'settings' => array(
+              'image_style' => 'resize_147x216',
+            ),
+          )
+        );
+      }
+      else {
+        $field = field_info_field('field_image');
+        if (isset($field['settings']['default_image'])) {
+          $def_fid = $field['settings']['default_image'];
+          $uri = file_load($def_fid);
+          $img_path = $uri->uri;
+          $image_s = array(
+            'style_name' => 'resize_147x216',
+            'path' => $img_path,
+          );
+          $vars['right_image'] = theme('image_style', $image_s);
+        }
+      }
+    }
+  }
+
+  if (!$vars['right_image']) {
+    $vars['right_image'] = field_view_field('simulpub_serie', $serie, 'field_simulpub_serie_visual_r', 'full');
+  }
+
+  $vars['serie_url'] = $serie_node ? url('node/' . $serie_node->nid) : 'javascript: void(0);';
+
+  $vars['show_chapitres'] = t('All chapters available');
+  $vars['next_info'] = '';
+
+  $photoswipe_settings = array();
+  $chapitre_count = 0;
+  $tomes = array();
+  $last_chatitres = array();
+  foreach ($s_c as $key => $section) {
+    foreach ($section as $chapitre) {
+      $status = ek_simulpub_get_chapitre_viewed_state($chapitre);
+
+      if ($status) {
+        $chapitre_data = array(
+          'attributes' => array(
+            'class' => array(
+              'serie-book',
+            ),
+          ),
+        );
+
+        if ($status == 1) {
+          $chapitre_count++;
+
+          $photoswipe_id = 'photoswipe_' . $chapitre->chapitre_id;
+
+          $chapitre_data['photoswipe'] = $photoswipe_id;
+          $chapitre_data['attributes']['class'][] = 'active';
+          $chapitre_data['data']['num'] = $chapitre->num;
+
+          $last_chatitres[] = $chapitre;
+
+          $wrapper = entity_metadata_wrapper('simulpub_chapitre', $chapitre);
+          foreach ($wrapper->field_chapitre_pages->value() as $image) {
+            if ($image['fid']) {
+              if (empty($image['uri'])) {
+                $image['uri'] = file_load($image['fid'])->uri;
+              }
+
+              $photoswipe_settings[$photoswipe_id][] = array(
+                'src' => image_style_url('simulpub_1080_1920', $image['uri']),
+                'h'   => $image['height'],
+                'w'   => $image['width'],
+              );
+            }
+          }
+        }
+        elseif (empty($vars['next_info'])) {
+          $wrapper = entity_metadata_wrapper('simulpub_chapitre', $chapitre);
+          $vars['next_info'] = $wrapper->field_chapitre_next_info->value();
+        }
+
+        $tomes[$key][$chapitre->chapitre_id] = $chapitre_data;
+      }
+    }
+  }
+  $vars['chapitre_counts'] = format_plural($chapitre_count, '@count chapter published', '@count chapters published');
+
+
+  $vars['new_chapitres'] = FALSE;
+  if ($last_chatitres) {
+    foreach ($last_chatitres as $chapitre) {
+      $photoswipe_id = 'photoswipe_' . $chapitre->chapitre_id;
+
+      $number = array_search($tomes[$chapitre->section_id][$chapitre->chapitre_id], array_values($tomes[$chapitre->section_id]));
+      $vars['new_chapitres'] = array(
+        'id' => $photoswipe_id,
+        'number' => 'chapitre ' . ($number + 1)  . ' disponible',
+      );
+    }
+  }
+
+  foreach ($tomes as $key => $tome) {
+    $tomes[$key] = array_values($tome);
+  }
+  foreach (array('action' => 'field_code_action', 'name' => 'field_code_name') as $key => $name) {
+    if (!empty($serie->{$name}[LANGUAGE_NONE][0]['value'])) {
+      $data[$key] = $serie->{$name}[LANGUAGE_NONE][0]['value'];
+    }
+    else {
+      $data[$key] = NULL;
+    }
+  }
+  $vars['tomes']          = $tomes;
+  $vars['subscribe_form'] = theme('ek_simulpub_mailchimp_subscribe_form', $data);
+
+  photoswipe_load_assets();
+  drupal_add_js(drupal_get_path('module', 'ek_simulpub') . '/js/ek_simulpub_photoswipe.js');
+  drupal_add_js(drupal_get_path('module', 'ek_simulpub') . '/js/photoswipe_ui_simulpub.js');
+  drupal_add_js(drupal_get_path('theme', 'editis_kurokawa') . '/html/js/behaviors/simulpubSubscribe.js');
+
+  foreach($photoswipe_settings as $key => $p) {
+    krsort($photoswipe_settings[$key]);
+    $photoswipe_settings[$key] = array_values($photoswipe_settings[$key]);
+  }
+
+  drupal_add_js(array('ek_simulpub' => array('photoswipe' => $photoswipe_settings)), 'setting');
+}
+
+/**
+ * Implements hook_file_url_alter().
+ *
+ * @param $uri
+ */
+function ek_simulpub_file_url_alter(&$uri) {
+  if (preg_match('/^' . ek_simulpub_get_image_style_files_dir(TRUE, TRUE)  . '(.*)/i', $uri, $matches)) {
+    $uri = ek_simulpub_get_image_style_alias_prefix() . $matches[1];
+  }
+}
+
+/**
+ * Implements hook_url_outbound_alter().
+ */
+function ek_simulpub_url_outbound_alter(&$path, &$options, $original_path) {
+  if (preg_match('/^' . ek_simulpub_get_image_style_files_dir(TRUE) . '(.*)/i', $path, $matches)) {
+    $path = ek_simulpub_get_image_style_alias_prefix() . $matches[1];
+  }
+}
+
+/**
+ * Implements hook_url_inbound_alter().
+ */
+function ek_simulpub_url_inbound_alter(&$path, $original_path, $path_language) {
+  if (preg_match('/^' . ek_simulpub_get_image_style_alias_prefix(TRUE) . '(.*)/i', $path, $matches)) {
+
+    if (empty($_SERVER['HTTP_REFERER'])) {
+      return;
+    }
+    $path = ek_simulpub_get_image_style_files_dir() . $matches[1];
+  }
+}
+
+function ek_simulpub_get_image_style_alias_prefix($match = FALSE) {
+  $path = variable_get('image_style_alias_prefix', 'simulpub/images') . '/';
+  if ($match) {
+    $path = str_replace('/', '\/', $path);
+  }
+  return $path;
+}
+
+function ek_simulpub_get_image_style_files_dir($match = FALSE, $uri = FALSE) {
+  if ($uri) {
+    $files_dir = 'private://';
+  }
+  else {
+    $files_dir = variable_get('file_public_path', conf_path() . '/files') . '/';
+  }
+  $files_dir .= 'styles/simulpub_1080_1920/private/';
+  if ($match) {
+    $files_dir = str_replace('/', '\/', $files_dir);
+  }
+  return $files_dir;
+}
+
+
+/**
+ * Implements hook_menu_alter.
+ * Check access for forum menu item.
+ */
+function ek_simulpub_menu_alter(&$items) {
+  $items['system/files']['access callback'] = '_accesscheck';
+}
+
+/**
+ * Callback to disallow access for the anonymous user.
+ */
+function _accesscheck(){
+  global $user;
+  return $user->uid;
+}
